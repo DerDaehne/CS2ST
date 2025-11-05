@@ -37,10 +37,10 @@ You can run directly from the flake without installation:
 
 ```bash
 # Run from GitHub (always latest main branch)
-nix run github:yourusername/CS2ST
+nix run github:DerDaehne/CS2ST
 
 # Or clone and run locally
-git clone https://github.com/yourusername/CS2ST.git
+git clone https://github.com/DerDaehne/CS2ST.git
 cd CS2ST
 nix run
 ```
@@ -52,7 +52,7 @@ Or add to your `configuration.nix` or `home.nix`:
 {
   environment.systemPackages = [
     (pkgs.callPackage (builtins.fetchGit {
-      url = "https://github.com/yourusername/CS2ST";
+      url = "https://github.com/DerDaehne/CS2ST";
       ref = "main";
     }) {})
   ];
