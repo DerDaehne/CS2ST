@@ -15,32 +15,67 @@ High-performance Counter-Strike 2 counter-strafe training tool written in Rust.
 - 🪶 **Lightweight** - ~8MB binary, <15MB RAM usage
 - 🌍 **Cross-platform** - Linux & Windows support from single codebase
 
-## Quick Start
+## Installation
 
-### With Nix (Recommended)
+### Pre-built Binaries (Recommended)
+
+Download the latest release for your platform from the [Releases](../../releases) page.
+
+**Linux:**
+```bash
+# Download and make executable
+chmod +x cs2-counter-strafe-trainer-linux-x64
+./cs2-counter-strafe-trainer-linux-x64
+```
+
+**Windows:**
+Just run `cs2-counter-strafe-trainer-windows-x64.exe`
+
+### NixOS Users
+
+You can run directly from the flake without installation:
+
+```bash
+# Run from GitHub (always latest main branch)
+nix run github:yourusername/CS2ST
+
+# Or clone and run locally
+git clone https://github.com/yourusername/CS2ST.git
+cd CS2ST
+nix run
+```
+
+Or add to your `configuration.nix` or `home.nix`:
+
+```nix
+{ pkgs, ... }:
+{
+  environment.systemPackages = [
+    (pkgs.callPackage (builtins.fetchGit {
+      url = "https://github.com/yourusername/CS2ST";
+      ref = "main";
+    }) {})
+  ];
+}
+```
+
+### Building from Source
+
+#### With Nix
 
 ```bash
 # Enter development environment
 nix develop
 
-# Build and run (release mode for Linux)
+# Build and run
 cargo run --release
 
-# Build for Linux
-cargo build --release --target x86_64-unknown-linux-gnu
-
-# Build for Windows
-cargo build --release --target x86_64-pc-windows-gnu
-
-# Or use the build script to build for both platforms
-./build.sh
+# Or build with Nix directly
+nix build
+./result/bin/cs2-counter-strafe-trainer
 ```
 
-Binaries will be in:
-- Linux: `target/x86_64-unknown-linux-gnu/release/cs2-counter-strafe-trainer`
-- Windows: `target/x86_64-pc-windows-gnu/release/cs2-counter-strafe-trainer.exe`
-
-### Without Nix
+#### Without Nix
 
 Install dependencies:
 ```bash
@@ -135,6 +170,51 @@ cargo build --release
 
 # Check binary size
 ls -lh target/release/cs2-counter-strafe-trainer
+```
+
+## Releases
+
+Pre-built binaries for Linux and Windows are available on the [Releases](../../releases) page.
+
+### Creating a Release
+
+Releases are automated via GitHub Actions. To create a new release:
+
+```bash
+# Use the release script
+./release.sh 2.0.1
+
+# Review changes
+git show HEAD
+
+# Push to trigger automated build
+git push && git push origin v2.0.1
+```
+
+GitHub Actions will:
+1. Build Linux binary with Nix (reproducible)
+2. Cross-compile Windows binary
+3. Create GitHub release with binaries
+4. Generate SHA256 checksums
+
+The workflow runs on every `v*.*.*` tag push.
+
+### Manual Testing of CI Build Process
+
+To test the build process locally before releasing:
+
+```bash
+# Install act (GitHub Actions local runner)
+# https://github.com/nektos/act
+
+# Test Linux build
+act -j build-linux
+
+# Test Windows build
+act -j build-windows
+
+# Test full release workflow
+act -j create-release
 ```
 
 ## License

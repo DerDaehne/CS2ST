@@ -90,6 +90,12 @@
             platforms = platforms.linux;
           };
         };
+
+        # Enable 'nix run' to directly execute the app
+        apps.default = {
+          type = "app";
+          program = "${self.packages.${system}.default}/bin/cs2-counter-strafe-trainer";
+        };
       }
     );
 }

@@ -1,0 +1,145 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-linux:
+    name: Build Linux (Nix)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v25
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+
+      - name: Build with Nix
+        run: |
+          nix build .#default
+          cp result/bin/cs2-counter-strafe-trainer cs2-counter-strafe-trainer-linux-x64
+
+      - name: Verify binary
+        run: |
+          file cs2-counter-strafe-trainer-linux-x64
+          ls -lh cs2-counter-strafe-trainer-linux-x64
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-binary
+          path: cs2-counter-strafe-trainer-linux-x64
+
+  build-windows:
+    name: Build Windows (Cross-compile)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-gnu
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mingw-w64
+
+      - name: Build for Windows
+        run: |
+          cargo build --release --target x86_64-pc-windows-gnu
+          cp target/x86_64-pc-windows-gnu/release/cs2-counter-strafe-trainer.exe cs2-counter-strafe-trainer-windows-x64.exe
+
+      - name: Verify binary
+        run: |
+          file cs2-counter-strafe-trainer-windows-x64.exe
+          ls -lh cs2-counter-strafe-trainer-windows-x64.exe
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-binary
+          path: cs2-counter-strafe-trainer-windows-x64.exe
+
+  create-release:
+    name: Create GitHub Release
+    needs: [build-linux, build-windows]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download Linux binary
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-binary
+
+      - name: Download Windows binary
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-binary
+
+      - name: Create checksums
+        run: |
+          sha256sum cs2-counter-strafe-trainer-linux-x64 > SHA256SUMS
+          sha256sum cs2-counter-strafe-trainer-windows-x64.exe >> SHA256SUMS
+          cat SHA256SUMS
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            cs2-counter-strafe-trainer-linux-x64
+            cs2-counter-strafe-trainer-windows-x64.exe
+            SHA256SUMS
+          body: |
+            ## CS2 Counter-Strafe Trainer ${{ github.ref_name }}
+
+            High-performance counter-strafe training tool for CS2.
+
+            ### Downloads
+
+            - **Linux (x86_64):** `cs2-counter-strafe-trainer-linux-x64`
+            - **Windows (x86_64):** `cs2-counter-strafe-trainer-windows-x64.exe`
+
+            ### Installation
+
+            **Linux:**
+            ```bash
+            chmod +x cs2-counter-strafe-trainer-linux-x64
+            ./cs2-counter-strafe-trainer-linux-x64
+            ```
+
+            Note: On Linux, you may need to add your user to the `input` group or run with sudo for keyboard monitoring.
+
+            **Windows:**
+            Just run the `.exe` file. Windows Defender may show a warning (expected for unsigned binaries).
+
+            ### Checksums
+
+            Verify downloads with SHA256:
+            ```bash
+            sha256sum -c SHA256SUMS
+            ```
+
+            ### Performance Targets
+
+            - Event latency: <1ms
+            - UI rendering: 144+ FPS
+            - Binary size: ~8MB
+            - Memory usage: <15MB
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
